@@ -1,0 +1,2 @@
+# mymesg
+Testing transactional jms
