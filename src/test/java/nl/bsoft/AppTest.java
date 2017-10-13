@@ -28,7 +28,7 @@ public class AppTest {
     @Rule
     public TestName name = new TestName();
 
-    int maxMessages = 200;
+    private final int maxMessages = 200;
 
     @Test
     public void test01Send() {
@@ -40,7 +40,7 @@ public class AppTest {
         myJndi.createContext();
         log.trace("Created myJNDI");
 
-        int status = 0;
+        int status;
         status = prod.createConnection(myJndi);
 
         if (0 == status) {
@@ -80,7 +80,7 @@ public class AppTest {
             if (null == result) {
                 status = -1;
             } else {
-                log.info("Read message '{}'", result);
+                log.debug("Read message '{}'", result);
                 consumer.commit();
                 nRead++;
             }
@@ -99,14 +99,14 @@ public class AppTest {
         AtomicLong nRead = new AtomicLong();
 
         Callable<Integer> task01 = () -> {
-            log.info("Started task1");
+            log.trace("Started task1");
             Producer prod = new Producer();
 
             MyJNDI myJndi = new MyJNDI();
             myJndi.createContext();
             log.trace("Created myJNDI");
 
-            int status = 0;
+            int status;
             status = prod.createConnection(myJndi);
 
             if (0 == status) {
@@ -117,12 +117,12 @@ public class AppTest {
             while ((0 == status) && (nMessages > 0)) {
                 String msg = "Mijn test bericht " + nMessages;
                 status = prod.sendMessage(msg);
-                log.info("Sended message: {}", msg);
+                log.trace("Sended message: {}", msg);
                 nMessages--;
                 nWritten.incrementAndGet();
             }
 
-            log.info("Ready sending messages with status: {}", status);
+            log.trace("Ready sending messages with status: {}", status);
             return status;
         };
 
@@ -135,7 +135,7 @@ public class AppTest {
             myJndi.createContext();
             log.trace("Created myJNDI");
 
-            int status = 0;
+            int status;
             status = consumer.createConnection(myJndi);
 
             if (0 == status) {
@@ -156,12 +156,13 @@ public class AppTest {
             long interval = endTime - startTime;
 
             while ((0 == status) && (interval < 15000)) {
-                log.info("03- Start reading");
+                log.trace("03- Start reading");
+
                 String result = consumer.readMessage();
                 if (null == result) {
                     status = -1;
                 } else {
-                    log.info("04- Read message: {} ", result);
+                    log.trace("04- Read message: {} ", result);
 
                     nRead.incrementAndGet();
 
@@ -171,9 +172,9 @@ public class AppTest {
                         delay = -1 * delay;
                     }
                     delay = delay % 5000L;
-                    log.info("05- Sleep for {} ms", delay);
+                    log.trace("05- Sleep for {} ms", delay);
                     TimeUnit.MICROSECONDS.sleep(delay);
-                    log.info("06- Awakened after {} ms", delay);
+                    log.trace("06- Awakened after {} ms", delay);
 
                     // commit transaction
                     status = consumer.commit();
@@ -183,7 +184,7 @@ public class AppTest {
 
                     endTime = System.currentTimeMillis();
                     interval = endTime - startTime;
-                    log.info("10- Status: {}, Interval: {}", status, interval);
+                    log.trace("08- Status: {}, Interval: {}", status, interval);
                 }
             }
 
@@ -191,7 +192,7 @@ public class AppTest {
         };
 
 
-        log.info("Start write executor - 1 thread");
+        log.debug("Start write executor - 1 thread");
         ExecutorService executor = Executors.newWorkStealingPool();
         List<Callable<Integer>> callables = Arrays.asList(task01, task02, task02, task02, task02, task02);
 
@@ -205,7 +206,7 @@ public class AppTest {
                             throw new IllegalStateException(e);
                         }
                     })
-                    .forEach(s -> log.info("Result: {}", s));
+                    .forEach(s -> log.debug("Result: {}", s));
             executor.shutdown();
             executor.awaitTermination(15, TimeUnit.SECONDS);
         } catch (InterruptedException ie) {

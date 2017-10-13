@@ -93,7 +93,7 @@ public class Consumer {
             if (message instanceof TextMessage) {
                 TextMessage textMessage = (TextMessage) message;
                 result = textMessage.getText();
-                log.info("Received message '{}'", result);
+                log.trace("Received message '{}'", result);
             }
         } catch (JMSException je) {
             try {
@@ -121,12 +121,14 @@ public class Consumer {
 
     public int closeConnection() {
         int status = 0;
+
         try {
             connection.close();
         } catch (JMSException je) {
             status = -1;
             log.error("Problem in jms", je);
         }
+
         return status;
     }
 

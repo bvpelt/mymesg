@@ -114,7 +114,7 @@ public class Producer {
             // Here we are sending the message!
             producer.send(msg);
             session.commit();
-            log.info("Sent message '{}'", msg.getText());
+            log.debug("Sent message '{}'", msg.getText());
         } catch (JMSException je) {
             try {
                 session.rollback();
