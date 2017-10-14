@@ -1,13 +1,16 @@
 package nl.bsoft.mymesg.consumer;
 
 
+import nl.bsoft.mymesg.data.Order;
 import nl.bsoft.mymesg.lookup.MyJNDI;
+import org.apache.activemq.ActiveMQConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jms.*;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+import java.io.Serializable;
 
 public class Consumer {
     private final Logger log = LoggerFactory.getLogger(Consumer.class);
@@ -36,9 +39,10 @@ public class Consumer {
                 jndi = new InitialContext(myJndi.getProps());
 
                 // Look up a JMS connection factory
-                ConnectionFactory connectionFactory = (ConnectionFactory) jndi
+                ActiveMQConnectionFactory connectionFactory = (ActiveMQConnectionFactory) jndi
                         .lookup("ConnectionFactory");
                 log.trace("Found connectionFactory");
+                connectionFactory.setTrustAllPackages(true);
 
                 connection = connectionFactory.createConnection();
 
@@ -80,7 +84,7 @@ public class Consumer {
         return status;
     }
 
-    public String readMessage() {
+    public String readTextMessage() {
         String result = null;
         long timeout = 1000; //ms
         try {
@@ -94,6 +98,44 @@ public class Consumer {
                 TextMessage textMessage = (TextMessage) message;
                 result = textMessage.getText();
                 log.trace("Received message '{}'", result);
+            }
+        } catch (JMSException je) {
+            try {
+                session.rollback();
+            } catch (JMSException jes) {
+                log.error("Problem during rollback", jes);
+            }
+            log.error("Problem using jms", je);
+        }
+        return result;
+    }
+
+    public Order readOrderMessage() {
+        Order result = null;
+
+        Object o = readMessage();
+        if (o instanceof Order) {
+            result = (Order)o;
+        }
+
+        return result;
+    }
+
+    public Object readMessage() {
+        Object result = null;
+        long timeout = 1000; //ms
+        try {
+            Message message = consumer.receive(timeout);
+
+            // There are many types of Message and TextMessage
+            // is just one of them. Producer sent us a TextMessage
+            // so we must cast to it to get access to its .getText()
+            // method.
+            if (message instanceof ObjectMessage) {
+                ObjectMessage objectMessage = (ObjectMessage) message;
+                result = objectMessage.getObject();
+
+                log.trace("Received message '{}'", (result == null ? "null" : result.toString()));
             }
         } catch (JMSException je) {
             try {

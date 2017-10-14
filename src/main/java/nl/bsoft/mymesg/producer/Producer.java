@@ -1,12 +1,14 @@
 package nl.bsoft.mymesg.producer;
 
 import nl.bsoft.mymesg.lookup.MyJNDI;
+import org.apache.activemq.ActiveMQConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jms.*;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+import java.io.Serializable;
 
 public class Producer {
     private final Logger log = LoggerFactory.getLogger(Producer.class);
@@ -38,9 +40,11 @@ public class Producer {
                 jndi = new InitialContext(myJndi.getProps());
 
                 // Look up a JMS connection factory
-                ConnectionFactory conFactory = (ConnectionFactory) jndi
+                ActiveMQConnectionFactory conFactory = (ActiveMQConnectionFactory) jndi
                         .lookup("ConnectionFactory");
                 log.trace("Found connectionFactory");
+
+                conFactory.setTrustAllPackages(true);
 
                 // Getting JMS connection from the server and starting it
                 connection = conFactory.createConnection();
@@ -103,7 +107,7 @@ public class Producer {
      * @return 0 - message send
      * -1 - message not send
      */
-    public int sendMessage(String message) {
+    public int sendTextMessage(String message) {
         int status = 0;
 
         try {
@@ -115,6 +119,69 @@ public class Producer {
             producer.send(msg);
             session.commit();
             log.debug("Sent message '{}'", msg.getText());
+        } catch (JMSException je) {
+            try {
+                session.rollback();
+            } catch (JMSException jes) {
+                log.error("Problem during rollback", jes);
+            }
+            status = -1;
+            log.error("Problem creating or sending the message", je);
+        }
+        return status;
+    }
+
+    /**
+     * Sending a text message
+     *
+     * @param message the text message to send
+     * @return 0 - message send
+     * -1 - message not send
+     */
+    public int sendTextMessage(String message, int priority) {
+        int status = 0;
+
+        try {
+            // We will send a small text message saying 'Hello World!'
+            TextMessage msg = session.createTextMessage(message);
+            log.trace("Created text message: {}", message);
+
+            // Here we are sending the message!
+            producer.send(msg, DeliveryMode.PERSISTENT, priority,0);
+            //producer.send(msg);
+            session.commit();
+            log.debug("Sent message '{}'", msg.getText());
+        } catch (JMSException je) {
+            try {
+                session.rollback();
+            } catch (JMSException jes) {
+                log.error("Problem during rollback", jes);
+            }
+            status = -1;
+            log.error("Problem creating or sending the message", je);
+        }
+        return status;
+    }
+    /**
+     * Sending a object message
+     *
+     * @param message the object to send
+     * @return 0 - message send
+     * -1 - message not send
+     */
+    public int sendMessage(Serializable message) {
+        int status = 0;
+
+        try {
+            // We will send a small text message saying 'Hello World!'
+            ObjectMessage msg = session.createObjectMessage();
+            msg.setObject(message);
+            log.trace("Created object message: {}", message.toString());
+
+            // Here we are sending the message!
+            producer.send(msg);
+            session.commit();
+            log.debug("Sent message");
         } catch (JMSException je) {
             try {
                 session.rollback();

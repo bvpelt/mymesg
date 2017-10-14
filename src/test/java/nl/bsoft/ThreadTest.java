@@ -22,73 +22,25 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Unit test for simple App.
  */
-public class AppTest {
-    private final Logger log = LoggerFactory.getLogger(AppTest.class);
+public class ThreadTest {
+    private final Logger log = LoggerFactory.getLogger(ThreadTest.class);
+    private final int maxMessages = 20;
+    private Random rand = new Random();
 
     @Rule
     public TestName name = new TestName();
 
-    private final int maxMessages = 200;
 
-    @Test
-    public void test01Send() {
-        log.info("Start test: {}", name.getMethodName());
+    private long getNextLong(final long maxLong) {
 
-        Producer prod = new Producer();
+        long number = rand.nextLong();
 
-        MyJNDI myJndi = new MyJNDI();
-        myJndi.createContext();
-        log.trace("Created myJNDI");
-
-        int status;
-        status = prod.createConnection(myJndi);
-
-        if (0 == status) {
-            status = prod.setDestination("MyQueue");
+        if (number < 0) {
+            number = -1 * number;
         }
 
-        int nWritten = 0;
-        while ((0 == status) && (nWritten < maxMessages)){
-            status = prod.sendMessage("Mijn test bericht -- " + nWritten);
-            nWritten++;
-        }
-
-        Assert.assertEquals(0, status);
-        log.info("End   test: {}", name.getMethodName());
-    }
-
-    @Test
-    public void test02Read() {
-        log.info("Start test: {}", name.getMethodName());
-
-        Consumer consumer = new Consumer();
-
-        MyJNDI myJndi = new MyJNDI();
-        myJndi.createContext();
-        log.trace("Created myJNDI");
-
-        int status;
-        status = consumer.createConnection(myJndi);
-
-        if (0 == status) {
-            status = consumer.setDestination("MyQueue");
-        }
-
-        int nRead = 0;
-        while  ((0 == status) && (nRead < maxMessages)) {
-            String result = consumer.readMessage();
-            if (null == result) {
-                status = -1;
-            } else {
-                log.debug("Read message '{}'", result);
-                consumer.commit();
-                nRead++;
-            }
-        }
-        consumer.closeConnection();
-        Assert.assertEquals(0, status);
-
-        log.info("End   test: {}", name.getMethodName());
+        number = number % maxLong;
+        return number;
     }
 
     @Test
@@ -116,7 +68,7 @@ public class AppTest {
             int nMessages = maxMessages;
             while ((0 == status) && (nMessages > 0)) {
                 String msg = "Mijn test bericht " + nMessages;
-                status = prod.sendMessage(msg);
+                status = prod.sendTextMessage(msg);
                 log.trace("Sended message: {}", msg);
                 nMessages--;
                 nWritten.incrementAndGet();
@@ -148,17 +100,18 @@ public class AppTest {
                 log.error("02- Couldnot set destination");
             }
 
-            Random rand = new Random();
+            //Random rand = new Random();
 
 
             long startTime = System.currentTimeMillis();
             long endTime = System.currentTimeMillis();
             long interval = endTime - startTime;
+            final long maxLong = 5000L;
 
             while ((0 == status) && (interval < 15000)) {
                 log.trace("03- Start reading");
 
-                String result = consumer.readMessage();
+                String result = consumer.readTextMessage();
                 if (null == result) {
                     status = -1;
                 } else {
@@ -167,11 +120,13 @@ public class AppTest {
                     nRead.incrementAndGet();
 
                     // Wait for a wile
-                    long delay = rand.nextLong();
+                    long delay = getNextLong(maxLong);
+                    /*long delay = rand.nextLong();
                     if (delay < 0) {
                         delay = -1 * delay;
                     }
                     delay = delay % 5000L;
+                    */
                     log.trace("05- Sleep for {} ms", delay);
                     TimeUnit.MICROSECONDS.sleep(delay);
                     log.trace("06- Awakened after {} ms", delay);
@@ -217,5 +172,6 @@ public class AppTest {
 
         log.info("End   test: {}", name.getMethodName());
     }
+
 
 }
