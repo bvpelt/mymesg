@@ -147,7 +147,7 @@ public class Producer {
             log.trace("Created text message: {}", message);
 
             // Here we are sending the message!
-            producer.send(msg, DeliveryMode.PERSISTENT, priority,0);
+            producer.send(msg, DeliveryMode.PERSISTENT, priority, 0);
             //producer.send(msg);
             session.commit();
             log.debug("Sent message '{}'", msg.getText());
@@ -162,6 +162,7 @@ public class Producer {
         }
         return status;
     }
+
     /**
      * Sending a object message
      *

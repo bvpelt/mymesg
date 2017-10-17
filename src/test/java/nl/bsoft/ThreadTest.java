@@ -24,12 +24,11 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ThreadTest {
     private final Logger log = LoggerFactory.getLogger(ThreadTest.class);
-    private final int maxMessages = 20;
-    private Random rand = new Random();
 
+    private final int maxMessages = 20;
     @Rule
     public TestName name = new TestName();
-
+    private Random rand = new Random();
 
     private long getNextLong(final long maxLong) {
 
@@ -44,7 +43,7 @@ public class ThreadTest {
     }
 
     @Test
-    public void test03WriteRead() {
+    public void test01WriteRead() {
         log.info("Start test: {}", name.getMethodName());
 
         AtomicLong nWritten = new AtomicLong();

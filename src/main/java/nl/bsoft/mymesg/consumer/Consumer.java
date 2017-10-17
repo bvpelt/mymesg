@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import javax.jms.*;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
-import java.io.Serializable;
 
 public class Consumer {
     private final Logger log = LoggerFactory.getLogger(Consumer.class);
@@ -84,9 +83,35 @@ public class Consumer {
         return status;
     }
 
+    public int setDestination(String queueName, int priority) {
+        int status = 0;
+
+        try {
+            // Creating session for receiving messages
+            session = connection.createSession(true,
+                    Session.AUTO_ACKNOWLEDGE);
+
+            // Getting the queue
+            Destination destination = (Destination) jndi.lookup(queueName);
+            log.trace("Found queue: {}", queueName);
+
+            // MessageConsumer is used for receiving (consuming) messages
+            String condition = "JMSPriority = " + priority;
+            consumer = session.createConsumer(destination, condition);
+        } catch (NamingException ne) {
+            status = -1;
+            log.error("Problem using jndi", ne);
+        } catch (JMSException je) {
+            status = -1;
+            log.error("Problem using jms", je);
+        }
+        return status;
+    }
+
     public String readTextMessage() {
         String result = null;
         long timeout = 1000; //ms
+
         try {
             Message message = consumer.receive(timeout);
 
@@ -100,13 +125,14 @@ public class Consumer {
                 log.trace("Received message '{}'", result);
             }
         } catch (JMSException je) {
+            log.error("Problem using jms - rollback", je);
             try {
                 session.rollback();
             } catch (JMSException jes) {
                 log.error("Problem during rollback", jes);
             }
-            log.error("Problem using jms", je);
         }
+
         return result;
     }
 
@@ -115,7 +141,7 @@ public class Consumer {
 
         Object o = readMessage();
         if (o instanceof Order) {
-            result = (Order)o;
+            result = (Order) o;
         }
 
         return result;
@@ -124,6 +150,7 @@ public class Consumer {
     public Object readMessage() {
         Object result = null;
         long timeout = 1000; //ms
+
         try {
             Message message = consumer.receive(timeout);
 
@@ -138,13 +165,14 @@ public class Consumer {
                 log.trace("Received message '{}'", (result == null ? "null" : result.toString()));
             }
         } catch (JMSException je) {
+            log.error("Problem using jms - rollback", je);
             try {
                 session.rollback();
             } catch (JMSException jes) {
                 log.error("Problem during rollback", jes);
             }
-            log.error("Problem using jms", je);
         }
+
         return result;
     }
 

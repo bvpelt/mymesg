@@ -20,12 +20,14 @@ import java.util.Set;
  */
 public class ObjectTest {
     private final Logger log = LoggerFactory.getLogger(ObjectTest.class);
+
     private final int maxMessages = 20;
+
     @Rule
     public TestName name = new TestName();
 
     @Test
-    public void test04Send() {
+    public void test01Send() {
         log.info("Start test: {}", name.getMethodName());
 
         Producer prod = new Producer();
@@ -59,7 +61,7 @@ public class ObjectTest {
     }
 
     @Test
-    public void test05Read() {
+    public void test02Read() {
         log.info("Start test: {}", name.getMethodName());
 
         Consumer consumer = new Consumer();
@@ -83,9 +85,9 @@ public class ObjectTest {
                 status = -1;
                 log.error("No object received");
             } else {
-                    log.debug("Read message '{}'", order.toString());
-                    consumer.commit();
-                    nRead++;
+                log.debug("Read message '{}'", order.toString());
+                consumer.commit();
+                nRead++;
             }
         }
         consumer.closeConnection();

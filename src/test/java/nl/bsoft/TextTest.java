@@ -17,11 +17,15 @@ import java.util.Random;
  */
 public class TextTest {
     private final Logger log = LoggerFactory.getLogger(TextTest.class);
-    private final int maxMessages = 20;
-    private Random rand = new Random();
 
     @Rule
     public TestName name = new TestName();
+
+    private Random rand = new Random();
+
+    private final int maxMessages = 20;
+    private int nWritten = 0;
+    private int nRead = 0;
 
     private int getNextInt(final int maxInt) {
 
@@ -46,23 +50,24 @@ public class TextTest {
         log.trace("Created myJNDI");
 
         int status;
+        int nWrittenLocal = 0;
         status = prod.createConnection(myJndi);
 
         if (0 == status) {
             status = prod.setDestination("MyQueue");
         }
 
-        int nWritten = 0;
         final int maxPriority = 10;
         int priority = getNextInt(maxPriority);
-        while ((0 == status) && (nWritten < maxMessages / 2)) {
-            status = prod.sendTextMessage("Mijn priority: " + priority + " test bericht -- " + nWritten, priority);
-            nWritten++;
+        while ((0 == status) && (nWrittenLocal < maxMessages / 2)) {
+            status = prod.sendTextMessage("Mijn priority: " + priority + " test bericht -- " + nWrittenLocal, priority);
+            nWrittenLocal++;
             priority = getNextInt(maxPriority);
         }
 
+        setnWritten(nWrittenLocal);
         Assert.assertEquals(0, status);
-        log.info("End   test: {}", name.getMethodName());
+        log.info("End   test: {} - nWritten: {}", name.getMethodName(), nWrittenLocal);
     }
 
     @Test
@@ -76,55 +81,76 @@ public class TextTest {
         log.trace("Created myJNDI");
 
         int status;
+        int nWrittenLocal = 0;
         status = prod.createConnection(myJndi);
 
         if (0 == status) {
             status = prod.setDestination("MyQueue");
         }
 
-        int nWritten = 0;
-        while ((0 == status) && (nWritten < maxMessages / 2)) {
-            status = prod.sendTextMessage("Mijn test bericht -- " + nWritten);
-            nWritten++;
+        while ((0 == status) && (nWrittenLocal < maxMessages / 2)) {
+            status = prod.sendTextMessage("Mijn test bericht -- " + nWrittenLocal);
+            nWrittenLocal++;
         }
 
+        setnWritten(nWrittenLocal + getnWritten());
         Assert.assertEquals(0, status);
-        log.info("End   test: {}", name.getMethodName());
+        log.info("End   test: {} - nWritten: {}", name.getMethodName(), nWrittenLocal);
     }
 
     @Test
     public void test03Read() {
-        log.info("Start test: {}", name.getMethodName());
-
-        Consumer consumer = new Consumer();
+        log.info("Start test: {} - nWritten: {}", name.getMethodName(), nWritten);
 
         MyJNDI myJndi = new MyJNDI();
         myJndi.createContext();
         log.trace("Created myJNDI");
 
-        int status;
-        status = consumer.createConnection(myJndi);
+        int status = 0;
 
-        if (0 == status) {
-            status = consumer.setDestination("MyQueue");
-        }
+        for (int priority = 0; priority < 10; priority++) {
+            Consumer consumer = new Consumer();
+            status = consumer.createConnection(myJndi);
+            log.info("Try priority: {}", priority);
 
-        int nRead = 0;
-        while ((0 == status) && (nRead < maxMessages)) {
-            String result = consumer.readTextMessage();
-            if (null == result) {
-                status = -1;
-            } else {
-                log.debug("Read message '{}'", result);
-                consumer.commit();
-                nRead++;
+            if (0 == status) {
+                status = consumer.setDestination("MyQueue", priority);
             }
+
+            while ((0 == status) && (nRead < maxMessages)) {
+                String result = consumer.readTextMessage();
+                if (null == result) {
+                    status = -1;
+                } else {
+                    log.debug("Read message '{}'", result);
+                    consumer.commit();
+                    nRead++;
+                }
+            }
+            consumer.closeConnection();
+            consumer = null;
         }
-        consumer.closeConnection();
-        Assert.assertEquals(0, status);
+        Assert.assertEquals(maxMessages, nRead);
 
         log.info("End   test: {}", name.getMethodName());
     }
 
+
+
+    public int getnWritten() {
+        return nWritten;
+    }
+
+    public void setnWritten(int nWritten) {
+        this.nWritten = nWritten;
+    }
+
+    public int getnRead() {
+        return nRead;
+    }
+
+    public void setnRead(int nRead) {
+        this.nRead = nRead;
+    }
 
 }
